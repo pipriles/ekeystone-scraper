@@ -104,13 +104,28 @@ def scrape_products(html):
     return scraped_p
 
 def start_selenium(s):
-    cookie_id = {'domain': 'wwwsc.ekeystone.com', 'name': 'ASP.NET_SessionId', 'value': s.cookies['ASP.NET_SessionId']}
-    cookie_items = {'domain': 'wwwsc.ekeystone.com', 'name': 'AccessoriesSearchResultsPageSize', 'value': '48'}
-    driver = webdriver.Chrome()
+
+    cookie_id = { 'domain': 'wwwsc.ekeystone.com', 
+        'name': 'ASP.NET_SessionId', 
+        'value': s.cookies['ASP.NET_SessionId'] }
+
+    cookie_items = { 'domain': 'wwwsc.ekeystone.com', 
+        'name': 'AccessoriesSearchResultsPageSize', 
+        'value': '48' }
+
+    options = webdriver.ChromeOptions()
+    options.headless('headless')
+
+    # path = './chromedriver'
+
+    driver = webdriver.Chrome(executable_path=path, 
+            chrome_options=options)
+
     driver.get(BASE_URL)
     driver.delete_all_cookies()
     driver.add_cookie(cookie_id)
     driver.add_cookie(cookie_items)
+
     return driver
 
 def wait(driver, html):
