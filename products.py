@@ -211,7 +211,9 @@ def scrape_single_subcategory(args):
     driver.get(url)
     
     result = paginate(driver)
-    add_dict_key(result, 'subcategory', category)
+    add_dict_key(result, 'subcategory', name)
+
+    driver.close()
 
     return result
 
@@ -243,7 +245,7 @@ def main():
             # Fashion design
             subcat = sub_categories(s, categories[0][1]) 
             if subcat: 
-                disrespect_categories(s, subcat)
+                scrape_subcat(s, subcat)
 
     except KeyboardInterrupt:
         print("Chao Chichobello")
