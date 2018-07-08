@@ -114,11 +114,11 @@ def start_selenium(s):
         'value': '48' }
 
     options = webdriver.ChromeOptions()
-    options.headless('headless')
+    options.add_argument('headless')
 
     # path = './chromedriver'
 
-    driver = webdriver.Chrome(executable_path=path, 
+    driver = webdriver.Chrome(# executable_path=path, 
             chrome_options=options)
 
     driver.get(BASE_URL)
