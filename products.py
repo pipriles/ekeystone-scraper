@@ -4,8 +4,9 @@ import requests as rq
 import bs4
 import json
 import log
-
+import multiprocessing as mp
 from selenium import webdriver
+from urllib.parse import urljoin
 
 BASE_URL = "http://wwwsc.ekeystone.com"
 HEADERS = { 
@@ -105,6 +106,8 @@ def scrape_products(html):
 
 def start_selenium(s):
 
+    print('Starting selenium...')
+
     cookie_id = { 'domain': 'wwwsc.ekeystone.com', 
         'name': 'ASP.NET_SessionId', 
         'value': s.cookies['ASP.NET_SessionId'] }
@@ -116,9 +119,8 @@ def start_selenium(s):
     options = webdriver.ChromeOptions()
     options.add_argument('headless')
 
-    # path = './chromedriver'
-
-    driver = webdriver.Chrome(# executable_path=path, 
+    driver = webdriver.Chrome(
+            # executable_path='./chromedriver', 
             chrome_options=options)
 
     driver.get(BASE_URL)
@@ -159,6 +161,7 @@ def paginate(driver):
     while contin:
         html = driver.page_source
         result = scrape_products(html)
+        print(' Scraped', len(result))
         products = products + result
         try:
             contin,nextp = find_next_page(driver)
@@ -176,6 +179,7 @@ def add_dict_key(items, key, value):
 def scrape_subcat(s,subcat):
     products = []
     driver = start_selenium(s)
+
     for x in subcat:
         category = x[0]
         print(category)
@@ -189,15 +193,57 @@ def scrape_subcat(s,subcat):
         with open("dumpeo.json", 'w', encoding='utf8') as f:
             json.dump(products, f, indent=4)
 
+################ Andres code is too strong #################
+
+def scrape_single_subcategory(args):
+
+    # Ugly things that i have to do :(
+    s, subcategory = args
+
+    # The Pinnacle of code beauty
+    driver = start_selenium(s)
+
+    name  = subcategory[0]
+    query = subcategory[1]
+    print(name)
+
+    url = urljoin(BASE_URL, query)
+    driver.get(url)
+    
+    result = paginate(driver)
+    add_dict_key(result, 'subcategory', category)
+
+    return result
+
+def ddos_attack(s, subcategories):
+
+    items = [ (s, x) for x in subcategories ]
+    with mp.Pool(6) as p:
+        yield from p.imap_unordered(scrape_single_subcategory, items)
+
+def disrespect_categories(s, sub_categories):
+
+    products = []
+    args = (s, sub_categories)
+
+    for x in ddos_attack(*args):
+        products.append(x)
+        with open('dump.json', 'w', 
+            encoding='utf8') as fp:
+            json.dump(products, fp, indent=2)
+
+###########################################################
+
 def main():
     try:
         s = log.login()
         categories = get_categories(s)
 
         if categories: 
-            subcat = sub_categories(s,categories[0][1]) 
+            # Fashion design
+            subcat = sub_categories(s, categories[0][1]) 
             if subcat: 
-                scrape_subcat(s,subcat)
+                disrespect_categories(s, subcat)
 
     except KeyboardInterrupt:
         print("Chao Chichobello")
