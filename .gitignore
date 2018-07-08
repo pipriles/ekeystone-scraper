@@ -110,5 +110,6 @@ venv.bak/
 *.csv
 *.json
 *.txt
+*.html
 
 
