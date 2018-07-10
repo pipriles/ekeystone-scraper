@@ -116,12 +116,12 @@ def start_selenium(s):
         'name': 'AccessoriesSearchResultsPageSize', 
         'value': '48' }
 
-    options = webdriver.ChromeOptions()
-    options.add_argument('headless')
+    '''options = webdriver.ChromeOptions()
+    options.add_argument('headless')'''
 
-    driver = webdriver.Chrome(
+    driver = webdriver.Chrome()
             # executable_path='./chromedriver', 
-            chrome_options=options)
+            #chrome_options=options)
 
     driver.get(BASE_URL)
     driver.delete_all_cookies()
@@ -193,6 +193,18 @@ def scrape_subcat(s,subcat):
         with open("dumpeo.json", 'w', encoding='utf8') as f:
             json.dump(products, f, indent=4)
 
+def white_list(file):
+    subcat = None
+    try:
+        with open(file,"r") as f:
+            subcat = f.readlines()
+        if subcat:    
+            subcat = [x.replace('\u2028','').strip() for x in subcat]
+            subcat = [[x,'/Search?browse=sub%7c{}'.format(x.replace(" ","+"))] for x in subcat]
+    except:
+        pass
+    return subcat
+
 ################ Andres code is too strong #################
 
 def scrape_single_subcategory(args):
@@ -224,7 +236,7 @@ def ddos_attack(s, subcategories):
         yield from p.imap_unordered(scrape_single_subcategory, items)
 
 def disrespect_categories(s, sub_categories):
-
+    #the pinacle of bananas -el jefe-
     products = []
     args = (s, sub_categories)
 
@@ -240,10 +252,10 @@ def main():
     try:
         s = log.login()
         categories = get_categories(s)
-
         if categories: 
+            subcat = white_list("white_list")
             # Fashion design
-            subcat = sub_categories(s, categories[0][1]) 
+            if not subcat: subcat = sub_categories(s, categories[0][1]) 
             if subcat: 
                 scrape_subcat(s, subcat)
 
