@@ -119,9 +119,9 @@ def start_selenium(s):
     '''options = webdriver.ChromeOptions()
     options.add_argument('headless')'''
 
-    driver = webdriver.Chrome()
+    driver = webdriver.Chrome(
             # executable_path='./chromedriver', 
-            #chrome_options=options)
+            chrome_options=options)
 
     driver.get(BASE_URL)
     driver.delete_all_cookies()
