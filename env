@@ -1,0 +1,9 @@
+# Crappy Keystone Credentials
+export KEYSTONE_USER='134141'
+export KEYSTONE_PASS='1689abe0'
+
+# Shopify API
+export SHOPIFY_SHOP_NAME='tms-automotive-supply'
+export SHOPIFY_API_KEY='d8e42d060fe45e6b2314c4a491c55441' 
+export SHOPIFY_PASSWORD='68cc4272c0e78a9e9c19b414ffa95dde'
+
