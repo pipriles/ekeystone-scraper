@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 
 import requests as rq
+import glob
+import sys
 import bs4
 import json
 import log
+import util
+import os
 import multiprocessing as mp
 from selenium import webdriver
 from urllib.parse import urljoin
@@ -135,7 +139,7 @@ def wait(driver, html):
     soup = bs4.BeautifulSoup(html, 'html.parser')
 
     while display:
-        driver.implicitly_wait(5)
+        driver.implicitly_wait(0.5)
         hidden = driver.find_elements_by_css_selector("#webcontent_0_row2_0_upSearchProgress")
         if not hidden[0].is_displayed():
             display = False
@@ -153,7 +157,7 @@ def find_next_page(driver):
 
     return contin, nextp
 
-
+@util.safe_mode
 def paginate(driver):
     products = []
     contin = True
@@ -193,6 +197,31 @@ def scrape_subcat(s,subcat):
         with open("dumpeo.json", 'w', encoding='utf8') as f:
             json.dump(products, f, indent=4)
 
+def white_list(path):
+    subcat = []
+    whole_subcat = []
+    try:
+        files = parse_path(path)
+        for file in files:
+            with open(file,"r") as f:
+                subcat = f.readlines()
+            if subcat:    
+                subcat = [x.replace('\u2028','').strip() for x in subcat]
+                subcat = [[x,'/Search?browse=sub%7c{}'.format(x.replace(" ","+"))] for x in subcat]
+            whole_subcat += subcat
+    except:
+        pass
+    return whole_subcat
+
+def parse_path(path):
+
+    if os.path.isdir(path):
+        path = os.path.join(path, '*')
+
+    files = glob.glob(path)
+    files = [ x for x in files if os.path.isfile(x) ] 
+    return files
+
 ################ Andres code is too strong #################
 
 def scrape_single_subcategory(args):
@@ -224,7 +253,7 @@ def ddos_attack(s, subcategories):
         yield from p.imap_unordered(scrape_single_subcategory, items)
 
 def disrespect_categories(s, sub_categories):
-
+    #the pinacle of bananas -el jefe-
     products = []
     args = (s, sub_categories)
 
@@ -238,12 +267,13 @@ def disrespect_categories(s, sub_categories):
 
 def main():
     try:
+        subcat = None
         s = log.login()
         categories = get_categories(s)
-
         if categories: 
+            if len(sys.argv) > 1: subcat = white_list(sys.argv[1])
             # Fashion design
-            subcat = sub_categories(s, categories[0][1]) 
+            if not subcat: subcat = sub_categories(s, categories[0][1]) 
             if subcat: 
                 scrape_subcat(s, subcat)
 
