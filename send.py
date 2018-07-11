@@ -12,6 +12,24 @@ def read_ips(filename):
         data = [ x.rstrip('\n') for x in fl ]
     return data
 
+def scp_call(src, dest):
+
+    command = [ 'scp', fl, dest ]
+    print(' '.join(command))
+    return sp.call(command)
+
+def send_files(src, dest, ips=IP_FILE):
+
+    vps = read_ips(ips)
+
+    files = glob.glob(src)
+    files = sorted(files)
+
+    for fl, ip in zip(files, vps):
+        dest = '%s:%s' % (ip, dest)
+        code = scp_call(fl, dest)
+        print('Return code:', code, ip) 
+
 def main():
 
     if len(sys.argv) != 2:
@@ -19,17 +37,7 @@ def main():
         return
 
     rfolder = sys.argv[1]
-    vps = read_ips(IP_FILE)
-
-    files = glob.glob('./inputs/white_*')
-    files = sorted(files)
-
-    for fl, ip in zip(files, vps):
-        dest = '%s:%s' % (ip, rfolder)
-        command = [ 'scp', fl, dest ]
-        print(' '.join(command))
-        code = sp.call(command)
-        print('Return code:', code, ip) 
+    send_files('./inputs/white_', rfoler)
 
 if __name__ == '__main__':
     main()
