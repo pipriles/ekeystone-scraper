@@ -234,9 +234,10 @@ def scrape_parts(driver, parts):
             results = scrape_part_type(driver, p)
             for r in results: scraped.append(r)
 
-        except Exception as e: 
+        except Exception as e:
             err = { 'message': str(e), 'part': p }
             debug['errors'].append(err)
+            driver = restore_driver(driver)
 
         except KeyboardInterrupt:
             break
@@ -255,6 +256,29 @@ def scrape_parts(driver, parts):
 
     return scraped
 
+def restore_driver(driver):
+
+    try:
+        driver.title
+
+    except WebDriverException:
+        print('- Driver recovered!')
+        driver = chrome_driver()
+        login(driver)
+
+    return driver
+
+def chrome_driver():
+
+    options = webdriver.ChromeOptions()
+    # options.add_argument('headless')
+
+    driver = webdriver.Chrome(
+            # executable_path='./chromedriver',
+            chrome_options=options)
+
+    return driver
+
 def read_parts(filename):
 
     with open(filename, 'r', encoding='utf8') as fl:
@@ -269,7 +293,7 @@ def main():
     filename = sys.argv[1]
 
     print('Starting chrome...')
-    driver = webdriver.Chrome()
+    driver = chrome_driver()
 
     print('Login into eKeystone...')
     login(driver)
