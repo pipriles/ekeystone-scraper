@@ -271,10 +271,10 @@ def restore_driver(driver):
 def chrome_driver():
 
     options = webdriver.ChromeOptions()
-    # options.add_argument('headless')
+    options.add_argument('headless')
 
     driver = webdriver.Chrome(
-            # executable_path='./chromedriver',
+            executable_path='./chromedriver',
             chrome_options=options)
 
     return driver
