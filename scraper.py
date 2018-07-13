@@ -3,7 +3,10 @@
 import config
 import bs4
 import re
-import time
+
+import pandas as pd
+import json
+import sys
 
 from urllib.parse import urljoin, urlencode
 from selenium import webdriver
@@ -11,7 +14,9 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.common.exceptions import \
         TimeoutException, WebDriverException
 
-BASE_URL = 'https://wwwsc.ekeystone.com'
+BASE_URL  = 'https://wwwsc.ekeystone.com'
+DUMP_PATH = './dump.json'
+LOG_PATH  = './debug.json'
 
 def config_cookies(driver):
     cookie = { 'name': 'AccessoriesSearchResultsPageSize', 'value': '48' }
@@ -148,7 +153,7 @@ def find_next_page(driver):
         after = None
     return after
 
-def wait_next_page(driver, timeout=600):
+def wait_for_search(driver, timeout=600):
 
     def displayed(driver):
         id_ = '#webcontent_0_row2_0_upSearchProgress'
@@ -192,33 +197,85 @@ def scrape_search(driver):
             # of our precious element
             pass
 
-        wait_next_page(driver)
+        print('  Waiting for next page...')
+        wait_for_search(driver)
+
+def scrape_part_type(driver, part):
+
+    print('- Searching part:', part)
+    choosed = search_part(driver, part)
+
+    if choosed is None: 
+        return None
+
+    p_type  = { 'subcategory': part }
+
+    # Wait for page to load
+    print('  Waiting for search...')
+    wait_for_search(driver)
+
+    for result in scrape_search(driver):
+        result.update(p_type)
+        yield result
+
+def dump_data(filename, data):
+    with open(filename, 'w', encoding='utf8') as fl:
+        json.dump(data, fl, indent=2)
 
 def scrape_parts(driver, parts):
 
+    debug = { 'count': 0, 'errors': [] } 
+    scraped = []
+
     for p in parts:
-        choosed = search_part(driver, p)
 
-        if choosed is None: 
-            continue
+        debug['count'] += 1
+        try:
+            results = scrape_part_type(driver, p)
+            for r in results: scraped.append(r)
 
-        # Wait for page to load?
-        p_dict  = { 'subcategory': p }
-        results = list( scrape_search(driver) )
+        except Exception as e: 
+            err = { 'message': str(e), 'part': p }
+            debug['errors'].append(err)
 
-        for r in results:
-            r.update(p_dict)
+        except KeyboardInterrupt:
+            break
 
-        yield results
+        finally:
+            # Write results
+            dump_data(DUMP_PATH, scraped)
+            dump_data(LOG_PATH, debug)
+
+            scount = len(scraped)
+            dcount = debug['count']
+
+            m  = '\nTOTAL SCRAPED: %s\n'    % scount
+            m += 'PART TYPES SCRAPED: %s\n' % dcount
+            print(m)
+
+    return scraped
+
+def read_parts(filename):
+
+    with open(filename, 'r', encoding='utf8') as fl:
+        return [ l.rstrip() for l in fl ]
 
 def main():
+
+    if len(sys.argv) != 2:
+        print('Usage: ./scraper.py [FILENAME]')
+        return
+
+    filename = sys.argv[1]
+
+    print('Starting chrome...')
     driver = webdriver.Chrome()
+
+    print('Login into eKeystone...')
     login(driver)
 
-    query = 'sub|Lug+Bolts'
-    scrape_parts(driver, query)
-
-    input('Wait...')
+    parts = read_parts(filename)
+    scrape_parts(driver, parts)
 
 if __name__ == '__main__':
     main()
