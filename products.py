@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import requests as rq
 import glob
 import sys
 import bs4
@@ -9,6 +8,7 @@ import log
 import util
 import os
 import multiprocessing as mp
+
 from selenium import webdriver
 from urllib.parse import urljoin
 
@@ -72,13 +72,16 @@ def scrape_products(html):
 
         #DESCRIPTION
         description = product.select_one(".descriptionLink a")
-        scraped_p[-1]["description"] = description.get_text() if description else None
+        scraped_p[-1]["description"] = description.get_text() \
+                if description else None
 
         #RESTRICTION
         restriction = product.select_one(".requiredProductsMessage")
         message = restriction.get_text() if restriction else None
+
         restriction = product.select_one(".restrictionsText img")
         title = restriction['title'] if restriction else None
+
         scraped_p[-1]["restriction"] = message.strip() if message else title
 
         #PRICE
@@ -134,9 +137,8 @@ def start_selenium(s):
 
     return driver
 
-def wait(driver, html):
+def wait(driver):
     display = True
-    soup = bs4.BeautifulSoup(html, 'html.parser')
 
     while display:
         driver.implicitly_wait(0.5)
@@ -173,7 +175,7 @@ def paginate(driver):
                 nextp[0].click()
         except: pass
         finally:
-            wait(driver,driver.page_source)
+            wait(driver)
         
     return products
 

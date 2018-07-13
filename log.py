@@ -11,7 +11,7 @@ LOGIN_URL = "http://wwwsc.ekeystone.com/Login"
 LOGOUT_URL = "http://wwwsc.ekeystone.com/login?Logout=true"
 
 def set_cookie(resp,s):
-    match = re.search(r'ASP.NET_SessionId=([^;]*)',resp.headers['Set-Cookie'])
+    match = re.search(r'ASP.NET_SessionId=([^;]*)', resp.headers['Set-Cookie'])
     if match: 
         cookie = match.group(1)
         s.cookies.set('ASP.NET_SessionId', cookie, domain='wwwsc.ekeystone.com')
