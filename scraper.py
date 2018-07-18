@@ -80,7 +80,7 @@ def extract_result(result):
 
     # NAME & NUMBER
     header = result.select_one('.resultsContentHeader')
-    spans = header.select('span')
+    spans  = header.select('span')
     
     supplier = [ s.get_text() for s in spans[:-1] ]
     supplier = ' '.join(supplier).strip()
