@@ -24,6 +24,23 @@ def format_search_string_to_url(search_string):
     q = querify(search_string)
     return 'https://www.amazon.com/s/field-keywords={}'.format(q)
 
+def safe_requests(func):
+    def wrapper(*args, **kwargs):
+        retries = 2
+        while True:
+            try:
+                return func(*args, **kwargs)
+            except rq.exceptions.HTTPError as e:
+                print(e)
+                print('Trying again...')
+                retries -= 1
+                time.sleep(60)
+                if retries <= 0: 
+                    raise(e)
+            except Exception as e:
+                raise(e)
+    return wrapper
+
 def process_tables(tables, keywords):
     # Ensuring all comparisons are caseless
     caseless_keywords = { s.casefold() for s in keywords } 
@@ -111,6 +128,7 @@ def get_product_results(search_string):
 
     return results
 
+@safe_requests
 def search_product_info(search_string, details=[]):
 
     # first_best_fit(search_string, get_product_results(search_string))
