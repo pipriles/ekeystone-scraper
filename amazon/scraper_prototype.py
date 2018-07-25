@@ -6,6 +6,7 @@ import pandas as pd
 import multiprocessing as mp
 import functools
 import sys
+import time
 
 from urllib.parse import urljoin
 from bs4 import BeautifulSoup
@@ -186,6 +187,7 @@ def scrape_product(product, details=[]):
         'exceptions': exceptions
     })
 
+    time.sleep(2)
     return result
 
 def crawl_products(products, details=[], N=4):
@@ -214,7 +216,7 @@ def main():
 
     try:
         # Now using this function it scrapes with 8 threads
-        for result in crawl_products(products, N=8):
+        for result in crawl_products(products, N=2):
             scraped.append(result)
             dump_data('amazon.json', scraped)
             pretty(result) # Nope
