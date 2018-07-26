@@ -193,13 +193,12 @@ def main():
     # '--disable-dev-profile'
 
     # Login to eKeystone
-    login(driver) 
+    login(driver)
 
     # Add product to cart
     # add_product(driver, 'MTH08612')
 
-    pids = df.pid.sample(5)
-    print(pids)
+    pids = df.pid.sample(20)
     add_batch(driver, pids)
 
     # data = calculate_shipping(driver)
