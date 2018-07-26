@@ -5,6 +5,7 @@ import bs4
 import re
 import pandas as pd
 import sys
+import os
 
 from urllib.parse import urljoin, urlencode
 from selenium import webdriver
@@ -15,6 +16,7 @@ from selenium.common.exceptions import TimeoutException
 
 BASE_URL = 'https://wwwsc.ekeystone.com'
 ZIP_CODE = '99501'
+PRODUCT_DIR= './dumps/products/'
 
 def config_cookies(driver):
     cookie = { 'name': 'AccessoriesSearchResultsPageSize', 'value': '48' }
@@ -49,6 +51,7 @@ def wait_for_elem_id(driver, id_, timeout=10):
 
 def add_product(driver, pid):
 
+    html = None
     url  = urljoin(BASE_URL, '/Search/Detail') 
     url += '?pid={}'.format(pid)
     print(url)
@@ -65,11 +68,12 @@ def add_product(driver, pid):
         driver.implicitly_wait(0.5)
 
     except TimeoutException as e:
-        print(e)
+        print('TimeoutException:', id_)
         return
     
     # Clicking "Add to Cart" button
     print('Adding to cart', pid)
+    html = driver.page_source
     elem.click()
 
     try:
@@ -80,13 +84,13 @@ def add_product(driver, pid):
         driver.implicitly_wait(0.5)
 
     except TimeoutException as e:
-        print(e)
+        print('TimeoutException:', id_)
         return
 
     print('Skip validation...')
     elem.click()
 
-    return url
+    return html
 
     # Executing javascript
     target  = 'webcontent_0$row2_0$productDetailBasicInfo$'
@@ -120,19 +124,30 @@ def parse_shipping(soup):
 
     # Extract options for each product
     options = []
-    pids = []
+    pids_wh = []
+    warehouses = []
+
+    for sp in soup.select('.checkoutWarehouseHeading > span'):
+        title = sp.get_text()
+        warehouses.append(title)
 
     for tb in soup.select('.checkoutShippingOptionsGrid > table'):
         opt = [ l.get_text() for l in tb.select('td label') ]
         options.append(opt)
 
-    for a in soup.select('.checkoutPartGrid .checkoutPrimaryPartId a'):
-        href  = a.get('href')
-        match = re.search(r'pid\=(.+)', href)
-        pid = match.group(1)
-        pids.append(pid)
+    for parts in soup.select('.checkoutPartGrid'):
 
-    return { p: opt for p, opt in zip(pids, options) }
+        pids = []
+        for a in part.select('.checkoutPrimaryPartId a'):
+            href = a.get('href')
+            match = re.search(r'pid\=(.+)', href)
+            pid = match.group(1)
+            pids.append(pid)
+
+        pids_wh.append(pids)
+
+    return { wh: { 'products': p, 'options': opt } \
+            for wh, p, opt in zip(warehouses, pids_wh, options) }
 
 def calculate_shipping(driver: webdriver.Chrome):
 
@@ -178,7 +193,14 @@ def calculate_shipping(driver: webdriver.Chrome):
 def add_batch(driver, batch):
 
     for p in batch:
-        add_product(driver, p)
+        html = add_product(driver, p)
+        if html is None: continue
+
+        print('HTML stored:', p)
+        name = 'product_{}.html'.format(p)
+        path = os.path.join(PRODUCT_DIR, name)
+        with open(path, 'w', encoding='utf8') as fl:
+            fl.write(html)
 
 def main():
 
@@ -209,7 +231,6 @@ def main():
 
     # data = calculate_shipping(driver)
     # print(data)
-
     input()
 
 if __name__ == '__main__':
