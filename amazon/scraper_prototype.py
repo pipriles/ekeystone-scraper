@@ -205,7 +205,7 @@ def scrape_product(product, details=[]):
         'exceptions': exceptions
     })
 
-    time.sleep(2)
+    # time.sleep(2)
     return result
 
 def crawl_products(products, details=[], N=4):
