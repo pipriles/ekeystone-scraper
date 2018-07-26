@@ -40,10 +40,10 @@ def login(driver):
     config_cookies(driver)
     return driver.get_cookies()
 
-def wait_for_elem_id(driver, id_):
+def wait_for_elem_id(driver, id_, timeout=10):
 
     event = EC.element_to_be_clickable((By.ID, id_))
-    wait = WebDriverWait(driver, 10)
+    wait = WebDriverWait(driver, timeout)
     elem = wait.until(event)
     return elem
 
@@ -57,11 +57,12 @@ def add_product(driver, pid):
     print('Loading product page...')
     driver.get(url) 
 
-    # Wait to button to be present
     try:
+        # Wait to button to be present
         id_  = 'webcontent_0_row2_0_productDetail'
         id_ += 'BasicInfo_addToOrder_lbAddToOrder'
         elem = wait_for_elem_id(driver, id_)
+        driver.implicitly_wait(0.5)
 
     except TimeoutException as e:
         print(e)
@@ -71,14 +72,28 @@ def add_product(driver, pid):
     print('Adding to cart', pid)
     elem.click()
 
+    try:
+        # Check for page validation
+        id_  = 'webcontent_0_row2_0_productDetail'
+        id_ += 'BasicInfo_addToOrder_FitmentValidator_lbAddToOrder'
+        elem = wait_for_elem_id(driver, id_, timeout=5)
+        driver.implicitly_wait(0.5)
+
+    except TimeoutException as e:
+        print(e)
+        return
+
+    print('Skip validation...')
+    elem.click()
+
     return url
 
     # Executing javascript
-    # target  = 'webcontent_0$row2_0$productDetailBasicInfo$'
-    # target += 'addToOrder$lbAddToOrder'
-    # script = "__doPostBack({}, '')".format(target)
-    # print(script)
-    # driver.execute_script(script)
+    target  = 'webcontent_0$row2_0$productDetailBasicInfo$'
+    target += 'addToOrder$lbAddToOrder'
+    script = "__doPostBack({}, '')".format(target)
+    print(script)
+    driver.execute_script(script)
 
 def clear_cart(driver):
 
@@ -183,11 +198,12 @@ def main():
     # Add product to cart
     # add_product(driver, 'MTH08612')
 
-    pids = df.pid[:5]
+    pids = df.pid.sample(5)
+    print(pids)
     add_batch(driver, pids)
 
-    data = calculate_shipping(driver)
-    print(data)
+    # data = calculate_shipping(driver)
+    # print(data)
 
     input()
 
