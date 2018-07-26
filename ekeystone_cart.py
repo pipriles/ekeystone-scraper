@@ -226,7 +226,7 @@ def main():
     # Add product to cart
     # add_product(driver, 'MTH08612')
 
-    pids = df.pid.sample(20)
+    pids = df.pid
     add_batch(driver, pids)
 
     # data = calculate_shipping(driver)
