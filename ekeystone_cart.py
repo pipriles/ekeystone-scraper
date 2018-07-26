@@ -189,7 +189,13 @@ def main():
     filename = sys.argv[1]
     df = pd.read_csv(filename)
 
-    driver = webdriver.Chrome()
+    options = webdriver.ChromeOptions()
+    options.add_argument('headless')
+
+    driver = webdriver.Chrome(
+            executable_path='./chromedriver',
+            chrome_options=options)
+
     # '--disable-dev-profile'
 
     # Login to eKeystone

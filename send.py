@@ -37,7 +37,7 @@ def main():
         return
 
     rfolder = sys.argv[1]
-    send_files('./inputs/white_*', rfolder)
+    send_files('./dumps/parts/*', rfolder)
 
 if __name__ == '__main__':
     main()
