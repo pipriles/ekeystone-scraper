@@ -74,6 +74,8 @@ def add_product(driver, pid):
     # Clicking "Add to Cart" button
     print('Adding to cart', pid)
     html = driver.page_source
+    return html
+
     elem.click()
 
     try:
