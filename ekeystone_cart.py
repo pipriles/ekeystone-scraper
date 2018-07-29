@@ -240,11 +240,11 @@ def main():
     df = pd.read_csv(filename)
 
     options = webdriver.ChromeOptions()
-    # options.add_argument('headless')
+    options.add_argument('headless')
 
-    driver = webdriver.Chrome()
-    #         executable_path='./chromedriver',
-    #         chrome_options=options)
+    driver = webdriver.Chrome(
+            executable_path='./chromedriver',
+            chrome_options=options)
 
     # '--disable-dev-profile'
 
