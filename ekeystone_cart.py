@@ -49,9 +49,31 @@ def wait_for_elem_id(driver, id_, timeout=10):
     elem = wait.until(event)
     return elem
 
-def add_product(driver, pid):
+def product_html(driver, pid):
 
     html = None
+    url  = urljoin(BASE_URL, '/Search/Detail') 
+    url += '?pid={}'.format(pid)
+    print(url)
+
+    # Go to product page in ekeystone
+    print('Loading product page...')
+    driver.get(url) 
+
+    try:
+        id_ = 'webcontent_0_row2_0_detailInfo'
+        elem = wait_for_elem_id(driver, id_)
+        driver.implicitly_wait(0.5)
+    
+    except TimeoutException:
+        print('TimeoutException!', id_)
+        return html
+
+    html = elem.get_attribute('innerHTML')
+    return html
+
+def add_product(driver, pid):
+
     url  = urljoin(BASE_URL, '/Search/Detail') 
     url += '?pid={}'.format(pid)
     print(url)
@@ -73,9 +95,6 @@ def add_product(driver, pid):
     
     # Clicking "Add to Cart" button
     print('Adding to cart', pid)
-    html = driver.page_source
-    return html
-
     elem.click()
 
     try:
@@ -92,14 +111,14 @@ def add_product(driver, pid):
     print('Skip validation...')
     elem.click()
 
-    return html
+    return driver.page_source
 
     # Executing javascript
-    target  = 'webcontent_0$row2_0$productDetailBasicInfo$'
-    target += 'addToOrder$lbAddToOrder'
-    script = "__doPostBack({}, '')".format(target)
-    print(script)
-    driver.execute_script(script)
+    # target  = 'webcontent_0$row2_0$productDetailBasicInfo$'
+    # target += 'addToOrder$lbAddToOrder'
+    # script = "__doPostBack({}, '')".format(target)
+    # print(script)
+    # driver.execute_script(script)
 
 def clear_cart(driver):
 
@@ -198,6 +217,13 @@ def add_batch(driver, batch):
         html = add_product(driver, p)
         if html is None: continue
 
+def scrape_details(driver, products):
+
+    for p in products:
+        
+        html = product_html(driver, p)
+        if html is None: continue
+        
         print('HTML stored:', p)
         name = 'product_{}.html'.format(p)
         path = os.path.join(PRODUCT_DIR, name)
@@ -214,11 +240,11 @@ def main():
     df = pd.read_csv(filename)
 
     options = webdriver.ChromeOptions()
-    options.add_argument('headless')
+    # options.add_argument('headless')
 
-    driver = webdriver.Chrome(
-            executable_path='./chromedriver',
-            chrome_options=options)
+    driver = webdriver.Chrome()
+    #         executable_path='./chromedriver',
+    #         chrome_options=options)
 
     # '--disable-dev-profile'
 
@@ -229,7 +255,7 @@ def main():
     # add_product(driver, 'MTH08612')
 
     pids = df.pid
-    add_batch(driver, pids)
+    scrape_details(driver, pids)
 
     # data = calculate_shipping(driver)
     # print(data)
