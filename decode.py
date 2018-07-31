@@ -50,7 +50,6 @@ def procress_product(filename):
     return data
 
 def process_batch(data):
-
     with mp.Pool(8) as p:
         yield from p.imap_unordered(procress_product, data)
 

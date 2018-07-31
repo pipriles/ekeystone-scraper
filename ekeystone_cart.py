@@ -67,7 +67,11 @@ def product_html(driver, pid):
     
     except TimeoutException:
         print('TimeoutException!', id_)
-        return html
+        return
+
+    except Exception as e:
+        print(e)
+        return
 
     html = elem.get_attribute('innerHTML')
     return html
@@ -226,6 +230,7 @@ def scrape_details(driver, products):
         
         print('HTML stored:', p)
         name = 'product_{}.html'.format(p)
+        name = name.replace('/', '_')
         path = os.path.join(PRODUCT_DIR, name)
         with open(path, 'w', encoding='utf8') as fl:
             fl.write(html)
@@ -241,25 +246,31 @@ def main():
 
     options = webdriver.ChromeOptions()
     options.add_argument('headless')
+    # '--disable-dev-profile'
 
     driver = webdriver.Chrome(
             executable_path='./chromedriver',
             chrome_options=options)
 
-    # '--disable-dev-profile'
+    try:
+        # Login to eKeystone
+        login(driver)
 
-    # Login to eKeystone
-    login(driver)
+        # Add product to cart
+        # add_product(driver, 'MTH08612')
 
-    # Add product to cart
-    # add_product(driver, 'MTH08612')
+        pids = df.pid
+        scrape_details(driver, pids)
 
-    pids = df.pid
-    scrape_details(driver, pids)
+        # data = calculate_shipping(driver)
+        # print(data)
 
-    # data = calculate_shipping(driver)
-    # print(data)
-    input()
+    except Exception as e:
+        print(e)
+        input('Press enter to continue...')
+
+    finally:
+        driver.close()
 
 if __name__ == '__main__':
     main()
