@@ -115,5 +115,5 @@ venv.bak/
 *.in
 
 inputs/*
-dumps/*
+dumps
 
