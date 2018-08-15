@@ -9,10 +9,11 @@ import multiprocessing as mp
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, parse_qs
 
+OUTPUT_FILE = './dumps/product_details.json'
+
 def product_details(html):
 
-    # soup = BeautifulSoup(html, 'html.parser')
-    soup = BeautifulSoup(html, 'lxml') # Test
+    soup = BeautifulSoup(html, 'html.parser')
     details = soup.select('div.productAttribute')
     result = {}
 
@@ -136,7 +137,7 @@ def product_data(html):
     # Impossibul
     # Width Length Height
 
-    print(result)
+    # print(result)
     print('--------------------')
 
     return result
@@ -159,29 +160,22 @@ def basename(path):
     name = os.path.splitext(base)[0]
     return name
 
-def extract_pid(filename):
-    return re.sub(r'.*product\_|\.[^\.]+$', '', filename)
-
 def procress_product(filename):
-
     try:
-        # Assume filename has pid... :(
+        # Assume filename has pid...
         # If it doesn't, it won't work
-        pid = extract_pid(filename)
-
+        name = re.search(r'product_(.+).html', filename)
         html = read_html(filename)
-
-        # data should be a `dict`
-        data = product_details(html)
-        data['pid'] = pid
-
+        data = product_data(html)
+        data['pid'] = name.group(1)
+        print(data.keys())
     except KeyboardInterrupt:
         data = {}
     return data
 
 def process_batch(data, N=4):
     with mp.Pool(N) as p:
-        yield from p.imap_unordered(procress_product, data)
+        yield from p.imap(procress_product, data)
 
 def main():
 
@@ -198,7 +192,7 @@ def main():
 
     except KeyboardInterrupt: pass
     finally:
-        dump_dict('product_details.json', results)
+        dump_dict(OUTPUT_FILE, results)
 
 if __name__ == '__main__':
     main()

@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# From the pdf report only 373/740 were found
+# From this codes there are 417 possible matchs
+# - This also matches vendors with same num
+#   but there are not in the report
+# We could extract these 417 and prepare them to upload to shopify
+# The rest we would try to scrape them from keystone again 
+# But it is possible that they don't match
 
 import config
 import bs4
