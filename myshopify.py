@@ -6,6 +6,7 @@ import re
 import json
 import sys
 import random
+import time
 import pandas as pd
 
 # We should add to scraper:
@@ -46,20 +47,50 @@ def prepare_shop():
 def prepare_product(product):
     price = re.search(r'[\d\.]+', product.get('retail_price'))
     price = float(price.group()) if price else None
+    print(product.get('Weight'))
     return {
-        "title": product.get('title'),
+        "title": '{} / {}'.format(
+                product.get('title'),
+                product.get('description')
+            ),
         "body_html": product.get('body_html'),
         "published": False,
         "vendor": product.get('supplier'),
         "product_type": product.get('subcategory'),
         # We don't have this information for now
-        # "product_type": 'Cleaning and Polishing',
         # "tags": 'carrand microfiber, microfiber',
-        # "images": [ { "src": product.get('img') } ],
+        "weight": product.get('Weight'),
         "images": [ { 'src': x } for x in product.get('images') ],
         "variants": [ { "price": price } ]
     }
 
+def fetch_all_products(**kwargs):
+
+    count = shopify.Product.count(**kwargs)
+    limit = 250
+    pages = count // limit
+
+    for p in range(1, count // limit + 2):
+        yield from shopify.Product.find(
+                limit=limit, page=p, **kwargs)
+
+
+def retry_on_error(func):
+    def wrapper(*args, **kwargs):
+        ret = None
+        retries = 2 # Number of attempts
+        while retries > 0:
+            try:
+                ret = func(*args, **kwargs)
+                retries = 0
+            except Exception as e:
+                print(e)
+                retries -= 1
+                time.sleep(3)
+            return ret
+    return wrapper
+
+@retry_on_error
 def add_product(product):
     created = shopify.Product.create(product)
     return created
@@ -76,6 +107,71 @@ def write_created(filename, data):
     with open(filename, 'w') as fp:
         json.dump(data, fp, indent=4)
 
+def prepare_frame(products):
+
+    for p in products:
+        row = _product_row(p)
+        for img in p.get('images', []):
+            row['Image Src'] = img
+            yield row
+            row = { 'Handle': p['title'] }
+
+def _product_row(product):
+
+    price = re.search(r'[\d\.]+', product.get('retail_price'))
+    price = float(price.group()) if price else None
+    grams = 453.59237 # Grams / lbs rate
+
+    stock = product['inventory_details'].values()
+    count = sum(map(int, stock))
+
+    return {
+        'Handle': product['title'],
+        'Title': '{} / {}'.format( 
+            product.get('title'), 
+            product.get('description')
+        ),
+        'Body (HTML)': product.get('body_html'),
+        'Vendor': product.get('supplier'),
+        'Type': product.get('subcategory'),
+        # 'Tags': Generate them...
+        'Published': True, # Set to True
+        'Option1 Name': 'Title',
+        'Option1 Value': 'Default Title',
+        # 'Variant SKU': Should be keystone part
+        'Variant Grams': product.get('Weight') * grams,
+        'Variant Inventory Qty': count,
+        'Variant Inventory Policy': 'deny',
+        'Variant Fulfillment Service': 'manual',
+        'Variant Price': price,
+        'Variant Requires Shipping': True,
+        # Iterate for each image
+        # 'Image Src':  ,
+        # 'Variant Image',
+        'Variant Weight Unit': 'lb'
+    }
+
+def to_handler(title):
+    handler = title.lower()
+    handler = re.sub(r'\W', ' ', handler)
+    chunks  = handler.split()
+    return '-'.join(chunks)
+
+# This function may take some time because it first
+# fetches all the products from the shopify store
+def map_from_shopify(filename):
+
+    data = read_dump(filename)
+
+    products = fetch_all_products()
+    products = pd.Series([ p.handle for p in products ])
+
+    mapper = { to_handler(x['title']): x['pid'] for x in data }
+    uploaded = products.map(mapper)
+    uploaded.name = 'Pid'
+
+    return uploaded
+
 def main():
 
     if len(sys.argv) != 2:
@@ -84,26 +180,33 @@ def main():
 
     filename = sys.argv[1]
     data = read_dump(filename)
+    length = len(data)
 
-    df = pd.DataFrame(data)
-    df = df.sample(frac=1)
-    df.drop_duplicates(subset='supplier', inplace=True)
-    data = df.sample(5).to_dict(orient='records')
+    # df = pd.DataFrame(data)
+    # df = df.sample(frac=1)
+    # df.drop_duplicates(subset='supplier', inplace=True)
+    # data = df.sample(5).to_dict(orient='records')
     
     # This will change shopify resource state
     # Remember to prepare the shop
     # before performing some requests
     prepare_shop()
 
-    created_products = []
-    for p in data:
+    created = []
+    for i, p in enumerate(data[:1], 1):
+
         prepared = prepare_product(p)
         new = add_product(prepared)
-        created_products.append(new)
-        print(new)
+
+        uploaded = ( p.get('pid'), new.id if new else None )
+        created.append(uploaded)
+
+        print(f'{i}/{length} - {new}')
         
-    dump = [ x.to_dict() for x in created_products ]
-    write_created('created.json', dump)
+    # dump = [ x.to_dict() for x in created ]
+    # write_created('created.json', dump)
+
+    write_created('created.json', created)
 
 if __name__ == '__main__':
     main()

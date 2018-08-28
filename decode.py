@@ -160,6 +160,26 @@ def basename(path):
     name = os.path.splitext(base)[0]
     return name
 
+# Very very ugly
+def _match_similar(df, keystone):
+    
+    regex = re.compile(r'=\"(.+)\"')
+    resup = re.compile(r'\((\S+)\)$')
+    parts = keystone.PartNumber.apply(lambda x: \
+        regex.search(x).group(1))
+
+    for i, row in df.iterrows():
+        num     = row.keystone_part
+        matches = keystone[parts == num]
+        match   = pd.Series(name=row.name)
+        for j, m in matches.iterrows():
+            code = resup.search(row.supplier).group(1)
+            if m.VenCode == code:
+                match = m
+                break
+        match.name = row.name
+        yield match
+
 def procress_product(filename):
     try:
         # Assume filename has pid...

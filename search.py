@@ -14,6 +14,7 @@ import re
 import pandas as pd
 import json
 import sys
+import itertools
 
 from urllib.parse import urljoin, urlencode
 from selenium import webdriver
@@ -71,6 +72,34 @@ def search_part(driver, part):
         selected = None
 
     return selected
+
+def search_part_number(driver, number):
+
+    params = {
+        'ShowSmartSuggestions': 'true',
+        'SearchType': 'partnumber',
+        'SearchTerm': number
+    }
+
+    route = 'Search?' + urlencode(params)
+    url = urljoin(BASE_URL, route)
+    driver.get(url)
+
+    print('Wait 5 secs...')
+    driver.implicitly_wait(2)
+
+    for result in scrape_search(driver):
+        yield result
+
+def _scrape_part_numbers(numbers, first=10):
+
+    driver = webdriver.Chrome()
+    login(driver)
+
+    for num in numbers:
+        results = search_part_number(driver, num)
+        head = itertools.islice(results, first)
+        yield from head
 
 def extract_result(result):
 

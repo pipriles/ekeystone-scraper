@@ -42,7 +42,7 @@ def login(driver):
     config_cookies(driver)
     return driver.get_cookies()
 
-def wait_for_elem_id(driver, id_, timeout=10):
+def wait_for_elem_id(driver, id_, timeout=300):
 
     event = EC.element_to_be_clickable((By.ID, id_))
     wait = WebDriverWait(driver, timeout)
@@ -163,7 +163,7 @@ def parse_shipping(soup):
     for parts in soup.select('.checkoutPartGrid'):
 
         pids = []
-        for a in part.select('.checkoutPrimaryPartId a'):
+        for a in parts.select('.checkoutPrimaryPartId a'):
             href = a.get('href')
             match = re.search(r'pid\=(.+)', href)
             pid = match.group(1)
@@ -174,11 +174,26 @@ def parse_shipping(soup):
     return { wh: { 'products': p, 'options': opt } \
             for wh, p, opt in zip(warehouses, pids_wh, options) }
 
-def calculate_shipping(driver: webdriver.Chrome):
+def tabular_form(data):
+
+    for key, value in data.items():
+        
+        shipping = {}
+        for o in value['options']:
+            opt, price = re.search(r'(.+) \$(.+)', o).groups()
+            shipping[opt] = price
+
+        for p in value['products']:
+            ret = {}
+            ret.update(shipping)
+            ret['pid'] = p
+            yield ret
+
+def calculate_shipping(driver: webdriver.Chrome, zip_code=ZIP_CODE):
 
     url = urljoin(BASE_URL, '/Checkout')
-    print('Loading checkout page')
-    driver.get(url)
+    # print('Loading checkout page')
+    # driver.get(url)
 
     try:
         # Test if page is really checkout page
@@ -192,7 +207,7 @@ def calculate_shipping(driver: webdriver.Chrome):
         id_ = 'webcontent_0_row2_0_dropShipPostalCode'
         elem = wait_for_elem_id(driver, id_)
         elem.clear()
-        elem.send_keys(ZIP_CODE)
+        elem.send_keys(zip_code)
         
         id_ = 'webcontent_0_row2_0_lbCalculateShipping'
         elem = wait_for_elem_id(driver, id_)
@@ -215,25 +230,60 @@ def calculate_shipping(driver: webdriver.Chrome):
 
     return data
 
+def scrape_zip_codes(zip_codes):
+
+    driver = webdriver.Chrome()
+    login(driver)
+
+    for code in zip_codes:
+        data = calculate_shipping(driver, code)
+        flat = tabular_form(data)
+        df = pd.DataFrame(flat)
+        df.to_csv(f'{code}.csv', index=None)
+
 def add_batch(driver, batch):
 
     for p in batch:
-        html = add_product(driver, p)
-        if html is None: continue
+        try:
+            html = add_product(driver, p)
+            if html is None: continue
+        except Exception as e:
+            print(e)
+
+def add_products_to_cart(pids):
+
+    driver = webdriver.Chrome()
+    login(driver)
+    add_batch(driver, pids)
+    driver.close()
 
 def scrape_details(driver, products):
+
+    # Remove extracted
+    df = pd.read_csv('./extracted.csv')
+    extracted = df.pid
+    products  = products[~products.isin(extracted)]
+    scraped   = []
 
     for p in products:
         
         html = product_html(driver, p)
         if html is None: continue
+
+        scraped.append(p)
         
         print('HTML stored:', p)
         name = 'product_{}.html'.format(p)
-        name = name.replace('/', '_')
+        name = name.replace('/', '$')
         path = os.path.join(PRODUCT_DIR, name)
         with open(path, 'w', encoding='utf8') as fl:
             fl.write(html)
+
+        s = pd.Series(scraped, name='pid')
+        print(len(s), 'more!')
+
+        df = pd.concat([extracted, s])
+        df.to_csv('./extracted.csv', header=['pid'], index=None)
 
 def main():
 
@@ -242,15 +292,15 @@ def main():
         return
 
     filename = sys.argv[1]
-    df = pd.read_csv(filename)
+    df = pd.read_json(filename)
 
-    options = webdriver.ChromeOptions()
-    options.add_argument('headless')
+    # options = webdriver.ChromeOptions()
+    # options.add_argument('headless')
     # '--disable-dev-profile'
 
-    driver = webdriver.Chrome(
-            executable_path='./chromedriver',
-            chrome_options=options)
+    driver = webdriver.Chrome()
+    #         executable_path='./chromedriver',
+    #         chrome_options=options)
 
     try:
         # Login to eKeystone
