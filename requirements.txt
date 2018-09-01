@@ -1,0 +1,6 @@
+selenium==3.14.0
+requests==2.19.1
+ShopifyAPI==3.1.0
+pandas==0.23.4
+beautifulsoup4==4.6.3
+shopify==0.3.0

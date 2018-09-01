@@ -44,10 +44,14 @@ SHOP_URL  = f'https://{API_KEY}:{PASSWORD}@{SHOP_NAME}.myshopify.com/admin'
 def prepare_shop():
     shopify.ShopifyResource.set_site(SHOP_URL)
 
+# This function needs weight
 def prepare_product(product):
     price = re.search(r'[\d\.]+', product.get('retail_price'))
     price = float(price.group()) if price else None
-    print(product.get('Weight'))
+
+    stock = product['inventory_details'].values()
+    count = sum(map(int, stock))
+
     return {
         "title": '{} / {}'.format(
                 product.get('title'),
@@ -61,7 +65,10 @@ def prepare_product(product):
         # "tags": 'carrand microfiber, microfiber',
         "weight": product.get('Weight'),
         "images": [ { 'src': x } for x in product.get('images') ],
-        "variants": [ { "price": price } ]
+        "variants": [ { 
+            "price": price,
+            "inventory_quantity": count 
+        } ]
     }
 
 def fetch_all_products(**kwargs):
@@ -71,9 +78,9 @@ def fetch_all_products(**kwargs):
     pages = count // limit
 
     for p in range(1, count // limit + 2):
+        print(p, 'Fetching products...')
         yield from shopify.Product.find(
                 limit=limit, page=p, **kwargs)
-
 
 def retry_on_error(func):
     def wrapper(*args, **kwargs):
@@ -94,6 +101,27 @@ def retry_on_error(func):
 def add_product(product):
     created = shopify.Product.create(product)
     return created
+
+@retry_on_error
+def update_product(data):
+
+	id_ = data['shopify_id']
+	print('Updating shopify product', id_)
+
+	product = shopify.Product.find(id_)
+	stock = data['inventory_details'].values()
+	count = sum(map(int, stock))
+
+	for p in product.variants:
+        # Update variant properties...
+        # p.price = data['retail_price']
+		
+		# This is depreacted
+		p.inventory_management = 'shopify'
+		p.inventory_quantity = count
+
+	# Commit changes
+	product.save()
 
 def find_products(products):
     query = ', '.join(products)
@@ -125,6 +153,9 @@ def _product_row(product):
     stock = product['inventory_details'].values()
     count = sum(map(int, stock))
 
+    # Title must be less than 255
+    # Inventory must be integer
+
     return {
         'Handle': product['title'],
         'Title': '{} / {}'.format( 
@@ -140,7 +171,7 @@ def _product_row(product):
         'Option1 Value': 'Default Title',
         # 'Variant SKU': Should be keystone part
         'Variant Grams': product.get('Weight') * grams,
-        'Variant Inventory Qty': count,
+        'Variant Inventory Qty': str(count),
         'Variant Inventory Policy': 'deny',
         'Variant Fulfillment Service': 'manual',
         'Variant Price': price,
@@ -159,7 +190,7 @@ def to_handler(title):
 
 # This function may take some time because it first
 # fetches all the products from the shopify store
-def map_from_shopify(filename):
+def pids_from_shopify(filename):
 
     data = read_dump(filename)
 

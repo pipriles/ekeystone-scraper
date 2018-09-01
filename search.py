@@ -323,7 +323,7 @@ def read_parts(filename):
 def main():
 
     if len(sys.argv) != 2:
-        print('Usage: ./scraper.py [FILENAME]')
+        print('Usage: ./search.py [FILENAME]')
         return
 
     filename = sys.argv[1]

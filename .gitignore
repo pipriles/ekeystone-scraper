@@ -110,10 +110,10 @@ venv.bak/
 
 *.csv
 *.json
-*.txt
 *.html
 *.in
 
 inputs/*
 dumps
 
+chromedriver
