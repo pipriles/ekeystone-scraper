@@ -1,6 +1,19 @@
 #!/usr/bin/env python
 
 import time
+import re
+import numbers
+
+def parse_price(price):
+
+    if isinstance(price, numbers.Number):
+        return price
+
+    clean = re.sub(r'[^\d\.]', '', price)
+    match = re.search(r'\d*\.?\d*', clean)
+    parsed = match.group()
+
+    return float(parsed) if parsed else None
 
 def safe_mode(func):
     def wrapper(*args, **kwargs):

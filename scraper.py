@@ -14,6 +14,7 @@ import argparse
 import config
 import decode
 import myshopify
+import util
 
 from urllib.parse import urljoin, urlencode
 from selenium import webdriver
@@ -23,7 +24,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
 BASE_URL  = 'https://wwwsc.ekeystone.com'
-LOCK_FILE = 'queue.csv'
 
 def login(driver):
 
@@ -47,25 +47,25 @@ def login(driver):
     return driver.get_cookies()
 
 def wait_for_progress(driver, timeout=600):
-	
-	def displayed(driver):
-		id_ = '#webcontent_0_upLoginProgress'
-		elem = driver.find_element_by_css_selector(id_)
-		return elem.is_displayed()
-		
-	try:
-		# Wait until it is displayed
-		wait = WebDriverWait(driver, 30)
-		wait.until(displayed)
 
-	except TimeoutException:
-		pass
-		
-	# Wait until it is not displayed
-	wait = WebDriverWait(driver, timeout)
-	wait.until_not(displayed)
-	
-	driver.implicitly_wait(0.5)
+    def displayed(driver):
+        id_ = '#webcontent_0_upLoginProgress'
+        elem = driver.find_element_by_css_selector(id_)
+        return elem.is_displayed()
+
+    try:
+        # Wait until it is displayed
+        wait = WebDriverWait(driver, 30)
+        wait.until(displayed)
+
+    except TimeoutException:
+        pass
+
+    # Wait until it is not displayed
+    wait = WebDriverWait(driver, timeout)
+    wait.until_not(displayed)
+
+    driver.implicitly_wait(0.5)
 
 def wait_for_elem_id(driver, id_, timeout=300):
 
@@ -104,11 +104,22 @@ def product_html(driver, pid):
 # MCN84697
 
 def update_data(old, new):
-    old['my_price'] = new['my_price']
+
+    old['my_price']     = new['my_price']
     old['jobber_price'] = new['jobber_price']
-    old['retail_price'] = new['retail_price']
+
+    price = new.get('retail_price')
+
+    if price:
+        # Increase price by rate%
+        # By default it is set to 20%
+        price  = util.parse_price(price)
+        price += price * config.PRICE_RATE
+        old['retail_price'] = price
+
     old['inventory'] = new['inventory']
     old['inventory_details'] = new['inventory_details']
+
     return old
 
 def scrape_details(driver, pids):
@@ -151,15 +162,15 @@ def scrape_details(driver, pids):
         write_queue(pending)
 
 def fetch_queue():
-	try:
-		pid = []
-		with open(config.LOCK_FILE, 'r', encoding='utf8') as fp:
-			pid = [ x.rstrip('\n') for x in fp.readlines() ]
-	except FileNotFoundError: pass
-	if not pid:
-		s = myshopify.pids_from_shopify(config.DB_FILE)
-		pid = s.tolist()
-	return pid
+    try:
+        pid = []
+        with open(config.LOCK_FILE, 'r', encoding='utf8') as fp:
+            pid = [ x.rstrip('\n') for x in fp.readlines() ]
+    except FileNotFoundError: pass
+    if not pid:
+        s = myshopify.pids_from_shopify(config.DB_FILE)
+        pid = s.tolist()
+    return pid
 
 def write_queue(items):
     with open(config.LOCK_FILE, 'w', encoding='utf8') as fp:
@@ -176,47 +187,56 @@ def write_json(filename, data, *args, **kwargs):
 
 def main():
 
-	parser = argparse.ArgumentParser(
-			description='Update data from keystone to shopify')
+    parser = argparse.ArgumentParser(
+        description='Update data from keystone to shopify')
 
-	parser.add_argument('--products', type=str, 
-			default=config.DB_FILE, metavar='FILENAME', 
-			help='Local products filename')
+    parser.add_argument('--products', type=str, 
+        default=config.DB_FILE, metavar='FILENAME', 
+        help='Local products filename')
 
-	parser.add_argument('--chrome-path', type=str,
-			default='./chromedriver', metavar='PATH',
-			help='Chrome driver path')
+    parser.add_argument('--price-rate', type=float,
+        default=20, metavar='RATE',
+        help='Price percentage rate')
 
-	args = parser.parse_args()
-	config.DB_FILE = args.products
+    parser.add_argument('--chrome-path', type=str,
+        default='./chromedriver', metavar='PATH',
+        help='Chrome driver path')
 
-	# Fetch current products queue
-	myshopify.prepare_shop()
-	pids = fetch_queue()
+    args = parser.parse_args()
 
-	# Next time the file created will be used
-	write_queue(pids)
+    config.DB_FILE    = args.products
+    config.PRICE_RATE = args.price_rate / 100
 
-	count = len(pids)
-	print(count, 'products pending!')
+    # Fetch current products queue
+    myshopify.prepare_shop()
+    pids = fetch_queue()
 
-	try:
-		driver = webdriver.Chrome()
+    # Next time the file created will be used
+    write_queue(pids)
 
-		# Login into keystone
-		print('Login into keystone...')
-		login(driver)
+    count = len(pids)
+    print(count, 'products pending!')
+
+    try:
+        driver = webdriver.Chrome()
+
+        # Login into keystone
+        print('Login into keystone...')
+        login(driver)
 
         # Process each product
-		scrape_details(driver, pids)
+        scrape_details(driver, pids)
 
-	except Exception as e:
-		print(e)
-		input('Press enter to exit...')
+    except KeyboardInterrupt:
+        pass
 
-	finally:
-		print('\nDone!')
-		driver.close()
+    except Exception as e:
+        print(e)
+        input('Press enter to exit...')
+
+    finally:
+        print('\nDone!')
+        driver.close()
 
 if __name__ == '__main__':
     main()

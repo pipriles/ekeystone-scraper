@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 
 import shopify
-import config
 import re
 import json
 import sys
 import random
 import time
 import pandas as pd
+
+import config
+import util
 
 # We should add to scraper:
 # - Subcategory and category
@@ -46,8 +48,8 @@ def prepare_shop():
 
 # This function needs weight
 def prepare_product(product):
-    price = re.search(r'[\d\.]+', product.get('retail_price'))
-    price = float(price.group()) if price else None
+    price = product.get('retail_price', '')
+    price = util.parse_price(price)
 
     stock = product['inventory_details'].values()
     count = sum(map(int, stock))
@@ -102,26 +104,31 @@ def add_product(product):
     created = shopify.Product.create(product)
     return created
 
-@retry_on_error
+# @retry_on_error
 def update_product(data):
 
-	id_ = data['shopify_id']
-	print('Updating shopify product', id_)
+    id_ = data['shopify_id']
+    print('Updating shopify product', id_)
 
-	product = shopify.Product.find(id_)
-	stock = data['inventory_details'].values()
-	count = sum(map(int, stock))
+    product = shopify.Product.find(id_)
+    stock = data['inventory_details'].values()
+    count = sum(map(int, stock))
 
-	for p in product.variants:
+    for p in product.variants:
         # Update variant properties...
         # p.price = data['retail_price']
-		
-		# This is depreacted
-		p.inventory_management = 'shopify'
-		p.inventory_quantity = count
 
-	# Commit changes
-	product.save()
+        # This is depreacted
+        p.inventory_management = 'shopify'
+        p.inventory_quantity = count
+
+        # Parse first
+        price = data.get('retail_price', '')
+        price = util.parse_price(price)
+        p.price = price
+
+    # Commit changes
+    product.save()
 
 def find_products(products):
     query = ', '.join(products)
@@ -129,7 +136,8 @@ def find_products(products):
 
 def read_dump(filename):
     with open(filename, 'r', encoding='utf8') as fp:
-        return json.load(fp)
+        data = json.load(fp)
+    return data
 
 def write_created(filename, data):
     with open(filename, 'w') as fp:
@@ -146,8 +154,8 @@ def prepare_frame(products):
 
 def _product_row(product):
 
-    price = re.search(r'[\d\.]+', product.get('retail_price'))
-    price = float(price.group()) if price else None
+    price = product.get('retail_price', '')
+    price = util.parse_price(price)
     grams = 453.59237 # Grams / lbs rate
 
     stock = product['inventory_details'].values()

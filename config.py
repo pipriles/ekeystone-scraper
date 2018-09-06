@@ -15,6 +15,8 @@ SHOPIFY_PASSWORD  = os.getenv('SHOPIFY_PASSWORD')
 LOCK_FILE = 'queue.txt'
 DB_FILE   = 'db.json'
 
+PRICE_RATE = 20/100 # 20%
+
 def main():
     print(KEYSTONE_USER)
     print(KEYSTONE_PASS)
