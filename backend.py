@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# We should use a database to store the data
+# But right now we don't have time :(
 
 import flask
 import redis
@@ -48,11 +50,10 @@ def status():
 @app.route('/stop')
 def stop():
     pid = find_pid()
-    if pid: 
-        os.kill(pid, signal.SIGINT)
-        # Ugly fix :(
-        sp.run(['pkill', 'chromium'])
-        db.delete(PID_KEY)
+    if pid: os.kill(pid, signal.SIGINT)
+    # Ugly fix :(
+    sp.run(['pkill', 'chromium'])
+    db.delete(PID_KEY)
     return flask.jsonify({ 'pid': pid })
 
 def main():
