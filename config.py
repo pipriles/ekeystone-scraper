@@ -12,6 +12,7 @@ SHOPIFY_API_KEY   = os.getenv('SHOPIFY_API_KEY')
 SHOPIFY_PASSWORD  = os.getenv('SHOPIFY_PASSWORD')
 
 # Scraper settings
+STAT_FILE = 'status.json'
 LOCK_FILE = 'queue.txt'
 DB_FILE   = 'db.json'
 

@@ -132,7 +132,11 @@ def scrape_details(driver, pids):
     while pending:
 
         p = pending.pop()
+
+        # Update status
         print('\nProcessing product', p)
+        util.write_status({ 'status': 'scraping', 
+            'pending': len(pending), 'target': p })
 
         # Scrape product from keystone
         html = product_html(driver, p)
@@ -155,6 +159,7 @@ def scrape_details(driver, pids):
 
         # Use shopify id to update
         # Implement shopify put method
+        util.write_status({ 'status': 'updating' })
         myshopify.update_product(match)
 
         # Save current state
@@ -207,6 +212,8 @@ def main():
     config.DB_FILE    = args.products
     config.PRICE_RATE = args.price_rate / 100
 
+    util.write_status({ 'status': 'fetching' })
+
     # Fetch current products queue
     myshopify.prepare_shop()
     pids = fetch_queue()
@@ -217,6 +224,10 @@ def main():
     count = len(pids)
     print(count, 'products pending!')
 
+    # Update status
+    util.write_status({ 'status': 'login', 'pending': count, 
+        'price_rate': config.PRICE_RATE, 'target': None })
+
     try:
         driver = webdriver.Chrome()
 
@@ -226,17 +237,19 @@ def main():
 
         # Process each product
         scrape_details(driver, pids)
+        driver.close()
+
+        util.write_status({ 'status': 'ready' })
 
     except KeyboardInterrupt:
         pass
 
     except Exception as e:
         print(e)
-        input('Press enter to exit...')
+        # input('Press enter to exit...')
 
     finally:
         print('\nDone!')
-        driver.close()
 
 if __name__ == '__main__':
     main()
