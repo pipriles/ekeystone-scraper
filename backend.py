@@ -4,20 +4,17 @@
 
 import flask
 import redis
-import random
 import os
 import signal
 import subprocess as sp
 import psutil
 import util
-import json
 
 db  = redis.Redis('localhost')
 app = flask.Flask(__name__)
 PID_KEY = 'SCRAPER_PID'
 
 def find_pid():
-
     pid = db.get(PID_KEY)
     pid = parse_key(pid, int)
     if pid and psutil.pid_exists(pid):
@@ -33,9 +30,19 @@ def parse_key(pid, cast):
 def run():
     pid = find_pid()
     if pid is None:
-        p = sp.Popen(['scraper.py'], stdin=sp.DEVNULL)
+        try:
+            # Check if value can be converted to float
+            # Prevent security flaw
+            rate = flask.request.args.get('priceRate', 20)
+            rate = str(float(rate))
+        except ValueError:
+            return flask.jsonify({ 'pid': None, 'msg': 'Nein!' })
+        
+        cmd = [ 'scraper.py', '--price-rate', rate ]
+        p = sp.Popen(cmd, stdin=sp.DEVNULL)
         pid = p.pid
         db.set(PID_KEY, pid)
+
     return flask.jsonify({ 'pid': pid })
 
 @app.route('/status')
