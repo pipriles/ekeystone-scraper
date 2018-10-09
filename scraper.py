@@ -203,6 +203,7 @@ def main():
         default=20, metavar='RATE',
         help='Price percentage rate')
 
+    # Not used...
     parser.add_argument('--chrome-path', type=str,
         default='./chromedriver', metavar='PATH',
         help='Chrome driver path')
@@ -229,7 +230,15 @@ def main():
         'price_rate': config.PRICE_RATE, 'target': None })
 
     try:
-        driver = webdriver.Chrome()
+        options = webdriver.ChromeOptions()
+        options.add_argument('headless')
+
+        # Change as you wish
+        # I am lazy to add an argument...
+        driver = webdriver.Chrome(
+                executable_path='./chromedriver',
+                options=options)
+
 
         # Login into keystone
         print('Login into keystone...')
