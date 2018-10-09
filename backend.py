@@ -26,7 +26,6 @@ def parse_key(pid, cast):
     return cast(pid) if pid else pid
 
 @app.route('/start')
-@app.route('/')
 def run():
     pid = find_pid()
     if pid is None:

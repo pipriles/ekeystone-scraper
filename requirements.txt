@@ -6,3 +6,4 @@ psutil==5.4.7
 redis==2.10.6
 pandas==0.23.4
 beautifulsoup4==4.6.3
+python-dotenv==0.9.1
