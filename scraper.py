@@ -179,7 +179,7 @@ def fetch_queue():
 
 def write_queue(items):
     with open(config.LOCK_FILE, 'w', encoding='utf8') as fp:
-        fp.writelines( f'{x}\n' for x in items )
+        fp.writelines( '%s\n' % x for x in items )
 
 def read_json(filename, *args, **kwargs):
     with open(filename, 'r', encoding='utf8') as fp:
