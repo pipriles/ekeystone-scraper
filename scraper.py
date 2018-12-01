@@ -46,7 +46,7 @@ def login(driver):
     wait_for_progress(driver)
     return driver.get_cookies()
 
-def wait_for_progress(driver, timeout=600):
+def wait_for_progress(driver, timeout=20):
 
     def displayed(driver):
         id_ = '#webcontent_0_upLoginProgress'
@@ -55,7 +55,7 @@ def wait_for_progress(driver, timeout=600):
 
     try:
         # Wait until it is displayed
-        wait = WebDriverWait(driver, 30)
+        wait = WebDriverWait(driver, 10)
         wait.until(displayed)
 
     except TimeoutException:

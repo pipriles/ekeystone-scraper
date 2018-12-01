@@ -10,9 +10,13 @@ import subprocess as sp
 import psutil
 import util
 
+from flask_cors import CORS
+
+PID_KEY = 'SCRAPER_PID'
+
 db  = redis.Redis('localhost')
 app = flask.Flask(__name__)
-PID_KEY = 'SCRAPER_PID'
+CORS(app)
 
 def find_pid():
     pid = db.get(PID_KEY)
@@ -63,7 +67,7 @@ def stop():
     return flask.jsonify({ 'pid': pid })
 
 def main():
-    pass
+    return app
 
 if __name__ == '__main__':
     main()
