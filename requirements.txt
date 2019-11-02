@@ -1,5 +1,5 @@
 ShopifyAPI==3.1.0
-requests==2.19.1
+requests==2.20.0
 Flask==1.0.2
 selenium==3.14.1
 psutil==5.4.7
