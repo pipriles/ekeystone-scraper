@@ -2,7 +2,7 @@ ShopifyAPI==3.1.0
 requests==2.19.1
 Flask==1.0.2
 selenium==3.14.1
-psutil==5.4.7
+psutil==5.6.6
 redis==2.10.6
 pandas==0.23.4
 beautifulsoup4==4.6.3
